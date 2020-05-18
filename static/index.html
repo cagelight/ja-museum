@@ -1,0 +1,88 @@
+<html>
+	<head>
+		<title>JA Memorial Museum</title>
+		<meta name="description" content="The JA Memorial Museum is a project attempting to provide detailed screenshots, info, and tagging to as much JA content as possible.">
+		<link rel="stylesheet" type="text/css" href="museum.css">
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@550&display=swap" rel="stylesheet">
+		<script src="museum.js"></script>
+	</head>
+	<body>
+		<div id="header">
+			<svg style="margin-left: 10px; fill: var(--jap-tint1-u); transition: fill 0.125s;" width="80" version="1.1" viewBox="0 0 192 336" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+				<metadata>
+				<rdf:RDF>
+				<cc:Work rdf:about="">
+				<dc:format>image/svg+xml</dc:format>
+				<dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+				<dc:title/>
+				</cc:Work>
+				</rdf:RDF>
+				</metadata>
+				<g transform="translate(0 -716.36)">
+				<g transform="translate(-160,128)">
+				<path d="m208 732.36 16 48-24.772-16zm104.77 32-8.7723-32-16 48zm39.228 0l-16-49.812v-126.19l-48.028 98.744-31.972-18.744-31.865 18.302-48.135-98.302v126.19l-16 49.812 64 144 32 16 32-16z" fill-rule="evenodd"/>
+				</g>
+				</g>
+			</svg>
+			<a id="title" href="#" class="ilink">JA Memorial Museum</a>
+			<div id="tagentry_cont"></div>
+			<div id="color_cont"><a href="javascript:Util.randomizeGlobalColors()" id="color_rand" class="material-icons tlink">color_lens</a></div>
+		</div>
+		<div id="main_content_cont">
+			<div id="gallery" style="display: none;">
+				<div id="gallery_left"><a class="material-icons" style="font-size: 60px">chevron_left</a></div>
+				<div id="gallery_image_cont"><img id="gallery_image"></div>
+				<div id="gallery_right"><a class="material-icons" style="font-size: 60px">chevron_right</a></div>
+			</div>
+			<div id="details_cont" style="display: none;">
+				<div id="details">
+					<div id="details_topper"></div>
+					<div id="details_thumbcont"></div>
+					<div id="details_stuffcont">
+						<div id="details_buttoncont">
+							<a id="details_download" class="tlink material-icons" style="font-size: 40px">save_alt</a>
+							<a id="details_gallery" class="tlink material-icons" style="font-size: 40px">collections</a>
+						</div>
+						<div id="details_infocont">
+							<div id="details_tablecont">
+								<table id="details_table">
+									<tr>
+										<td class="details_td"><span class="details_label">Name:</span></td>
+										<td class="details_td"><span id="details_name"></span></td>
+									</tr>
+									<tr>
+										<td class="details_td"><span class="details_label">Size:</span></td>
+										<td class="details_td"><span id="details_size"></span></td>
+									</tr>
+									<tr>
+										<td class="details_td"><span class="details_label">Added:</span></td>
+										<td class="details_td"><span id="details_added"></span></td>
+									</tr>
+									<tr>
+										<td class="details_td"><span class="details_label">Modified:</span></td>
+										<td class="details_td"><span id="details_modified"></span></td>
+									</tr>
+									<tr>
+										<td class="details_td"><span class="details_label">Tags:</span></td>
+										<td class="details_td"><span id="details_tags"></span></td>
+									</tr>
+								</table>
+							</div>
+							<div id="details_infostuff">
+								<div id="details_titlecont"></div>
+								<div id="details_desccont"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="filter_panel" style="display: none;">
+				<div id="tag_cont_main">
+				</div>
+			</div>
+			<div id="main_content" style="display: none;">
+			</div>
+		</div>
+	</body>
+</html>
