@@ -2,12 +2,25 @@
 	<head>
 		<title>JA Memorial Museum</title>
 		<meta name="description" content="The JA Memorial Museum is a project attempting to provide detailed screenshots, info, and tagging to as much JA content as possible.">
+		<meta name="keywords" content="Jedi, Academy, Mods, Archive, Museum, Downloads">
 		<link rel="stylesheet" type="text/css" href="museum.css">
 		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 		<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@550&display=swap" rel="stylesheet">
 		<script src="museum.js"></script>
 	</head>
 	<body>
+		<div id="settings_menu" style="visibility: hidden;">
+			<table id="settings_menu_table">
+				<tr>
+					<td>Automatic Thumbnail Slideshow</td>
+					<td><input type="checkbox" id="settings_autothumb_cb" checked></td>
+				</tr>
+				<tr>
+					<td>Animated Thumbnail Transitions</td>
+					<td><input type="checkbox" id="settings_animthumb_cb" checked></td>
+				</tr>
+			</table>
+		</div>
 		<div id="header">
 			<svg style="margin-left: 10px; fill: var(--jap-tint1-u); transition: fill 0.125s;" width="80" version="1.1" viewBox="0 0 192 336" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 				<metadata>
@@ -26,8 +39,11 @@
 				</g>
 			</svg>
 			<a id="title" href="#" class="ilink">JA Memorial Museum</a>
-			<div id="tagentry_cont"></div>
-			<div id="color_cont"><a href="javascript:Util.randomizeGlobalColors()" id="color_rand" class="material-icons tlink">color_lens</a></div>
+			<div id="filter_entry_cont">
+				<input id="filter_entry" type="text" autocomplete="off" spellcheck="false">
+			</div>
+			<a href="javascript:Util.randomizeGlobalColors()" id="color_rand" class="material-icons tlink">color_lens</a>
+			<a id="settings_menu_act" class="material-icons tlink">settings</a>
 		</div>
 		<div id="main_content_cont">
 			<div id="gallery" style="display: none;">

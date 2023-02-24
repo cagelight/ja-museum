@@ -159,13 +159,9 @@ bool JAPortalBackend::add_image(JAPortalDataSet const & set, QImage const & img)
 	int num = 0;
 	for (;; num++) if (set.images.indexOf(num) == -1) break;
 	
-	QString source_name = set.name_for_num(num, SOURCE_SAVE_EXT);
-	QString image_name = set.name_for_num(num, IMAGE_SAVE_EXT);
-	QString thumb_name = set.name_for_num(num, THUMB_SAVE_EXT);
-	
-	QString spath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_SOURCE_PATH) .arg(source_name);
-	QString ipath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_FULL_PATH) .arg(image_name);
-	QString tpath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_THUMB_PATH) .arg(thumb_name);
+	QString spath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_SOURCE_PATH) .arg(set.name_for_num(num, SOURCE_SAVE_EXT));
+	QString ipath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_FULL_PATH) .arg(set.name_for_num(num, IMAGE_SAVE_EXT));
+	QString tpath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_THUMB_PATH) .arg(set.name_for_num(num, THUMB_SAVE_EXT));
 	
 	if (!save_source(img, spath)) {
 		QMessageBox::critical(nullptr, "Failed To Write Image", QString { "Could not write image to output \"%1\", check permissions." } .arg(spath));
@@ -187,7 +183,27 @@ bool JAPortalBackend::add_image(JAPortalDataSet const & set, QImage const & img)
 	return true;
 }
 
+void JAPortalBackend::remove_image(JAPortalDataSet const & set, int num) {
+	if (set.images.indexOf(num) == -1) return;
+	const_cast<JAPortalDataSet &>(set).images.removeAll(num);
+	
+	QString spath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_SOURCE_PATH) .arg(set.name_for_num(num, SOURCE_SAVE_EXT));
+	QString ipath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_FULL_PATH) .arg(set.name_for_num(num, IMAGE_SAVE_EXT));
+	QString tpath = QString { "%1/%2/%3" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_THUMB_PATH) .arg(set.name_for_num(num, THUMB_SAVE_EXT));
+	
+	QFile::remove(spath);
+	QFile::remove(ipath);
+	QFile::remove(tpath);
+}
+
 void JAPortalBackend::purge_and_regenerate_images() {
+	
+	auto decision = QMessageBox::question(nullptr, "BE SURE DUDE", "Are you sure you want to do this? Are you *really* sure???", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+	if (decision != QMessageBox::Yes) return;
+	
+	m_data->opt.output_dir.mkdir(IMAGE_FULL_PATH);
+	m_data->opt.output_dir.mkdir(IMAGE_THUMB_PATH);
+	
 	QString sdirp = QString { "%1/%2/" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_SOURCE_PATH);
 	QString idirp = QString { "%1/%2/" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_FULL_PATH);
 	QString tdirp = QString { "%1/%2/" } .arg(m_data->opt.output_dir.absolutePath()) .arg(IMAGE_THUMB_PATH);
@@ -367,4 +383,56 @@ void JAPortalBackend::prepare(JAPortalOptions const & opt) {
 	m_data->initialized = true;
 	m_data->opt = opt;
 	load();
+}
+
+void JAPortalBackend::validate() {
+	
+	struct Validator {
+		void add_implication(QString const & a, QString const & b) { implications[a].insert(b); }
+		void add_bidirectional_implication(QString const & a, QString const & b) {
+			add_implication(a, b);
+			add_implication(b, a);
+		}
+		void resolve(QSet<QString> & tags) {
+			while (true) {
+				bool imade = false;
+				for (auto iter = implications.begin(); iter != implications.end(); iter++) {
+					if (tags.contains(iter.key())) {
+						for (auto & tag : iter.value()) {
+							if (tags.contains(tag)) continue;
+							tags.insert(tag);
+							imade = true;
+						}
+					}
+				}
+				if (!imade) break;
+			}
+		}
+	private:
+		QMap<QString, QSet<QString>> implications;
+	};
+	
+	for (auto & setptr : m_data->data_sets) {
+		JAPortalDataSet & set = *setptr.second;
+		QSet<QString> tags { set.tags.begin(), set.tags.end() };
+		
+		Validator v;
+		v.add_implication("area_auditorium", "area_stage");
+		v.add_implication("area_dojo", "area_duel");
+		v.add_implication("area_arena_duel", "area_duel");
+		v.add_implication("area_arena_flying", "area_flying");
+		v.add_implication("area_race_track", "area_driving");
+		v.add_implication("area_sport_jousting", "area_driving");
+		v.add_implication("area_flying", "feature_vehicle");
+		v.add_implication("area_driving", "feature_vehicle");
+		v.add_implication("area_rancor_pit", "feature_npc_combat");
+		v.add_implication("area_npc_fight", "feature_npc_combat");
+		v.add_implication("area_cave_crystal", "area_cave");
+		v.add_implication("content_species", "content_playermodel");
+		v.add_implication("feature_duel_spawns", "feature_gametype_duel");
+		v.add_implication("feature_secret_many", "feature_secret");
+		v.resolve(tags);
+		
+		set.tags = QStringList { tags.begin(), tags.end() };
+	}
 }

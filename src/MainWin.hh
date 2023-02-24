@@ -21,11 +21,14 @@ private slots:
 	void populate_gui(JAPortalOptions const & opt);
 	void setup_current_item();
 	void add_image_to_current_item(QString);
+	void delete_image_on_current_item(int);
 	void set_tags_on_current_item(QStringList);
 	void set_title_on_current_item(QString);
 	void set_description_on_current_item(QString);
+	void validate();
 	void save();
 	void select_random_item();
+	void filter_pk3_view();
 	
 private:
 	struct PrivateData;

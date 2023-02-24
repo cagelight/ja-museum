@@ -20,11 +20,11 @@ static constexpr int  SOURCE_QUALITY = 100;
 
 static constexpr char IMAGE_SAVE_EXT [] = ".webp";
 static constexpr char IMAGE_SAVE_FORMAT [] = "WEBP";
-static constexpr int  IMAGE_QUALITY = 99;
+static constexpr int  IMAGE_QUALITY = 95;
 
 static constexpr char THUMB_SAVE_EXT [] = ".webp";
 static constexpr char THUMB_SAVE_FORMAT [] = "WEBP";
-static constexpr int  THUMB_QUALITY = 90;
+static constexpr int  THUMB_QUALITY = 80;
 
 struct PerfProf : public QElapsedTimer {
 	inline PerfProf() : QElapsedTimer() { start(); }

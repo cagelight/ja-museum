@@ -3,6 +3,51 @@ const IMAGE_EXT = '.webp'
 const THUMB_DELAY_STATIC = 5000
 const THUMB_DELAY_RAND = 20000
 
+const CAT_DESC = {
+	'area': 'This category identifies key areas in maps.',
+	'content': 'This category identifies the type of content present in each file.',
+	'design': 'This category conveys the overall design choices of maps.',
+	'feature': 'This category identifies key features in maps.',
+	'rating': 'This category assigns a curator\'s rating to each file, purely personal preference.',
+	'size': 'This category assigns a relative "size" for a map. Not just physical size, but also content density are both taken into account. (A giant overly simple map might be considered small in relative "size")',
+	'theme': 'This category assigns themes to a map. A map must be fairly strong in a theme to be considered.'
+}
+
+const TAG_DESC = {
+	'area_arena_duel': 'A type of large duel area with particular arena-like features, at the very least a large viewing area, and sometimes additionally a way to cage-in the arena and/or team entrances.',
+	'area_auditorium': 'An area containing a stage, with significant capacity for an audience, without any sort of barrier between audience and stage, and with a backstage area accessible from the stage.',
+	'area_dojo': 'An east asian style of room popular in the JA community.',
+	'area_duel': 'An area dedicated to dueling, often with a special gimmick.',
+	
+	'content_adult': 'This file contains adult content.',
+	'content_map': 'This file contains one or more compiled maps. (.bsp)',
+	'content_map_source': 'This file contains one or more uncompiled maps. (.map)',
+	'content_npc': 'This file contains one or more NPC declaration files. (.npc)',
+	'content_playermodel': 'This file contains one or more player compatible models.',
+	'content_saber': 'This file contains one or more playable sabers. (.sab)',
+	'content_species': 'This file contains one or more player compatible models setup to use the JA species system.',
+	'content_vehicle': 'This file contains one or more vehicle declaration files. (.veh)',
+	
+	'design_dense': 'Essentially this tag means the map has a "realistic" and fleshed out layout, not having fake doors, not sprawling the map out into the void, etc. (this tag does not apply to tiny maps or particularly simple small maps)',
+	'design_self_contained': 'This map contains a significant interior portion (almost) entirely encapsulated by an exterior portion. (e.g. a fully mapped out ship with exterior and interior.) The interior must be directly reachable from the exterior, and vice versa (no teleporters).',
+	
+	'feature_destructible': '',
+	'feature_easter_egg_hunt': 'There are one or more things hidden around the map to be found, usually just for fun, but sometimes to unlock a secret.',
+	'feature_gametype_ctf': 'Team and flag spawns for CTF gameplay.',
+	'feature_gametype_duel': 'This file contains a map that is either small enough for decent Duel gameplay, and/or has dedicated Duel spawns. (Note that this tag refers to the Duel (and Powderduel) gametype, not the general concept of duel gameplay.)',
+	'feature_gametype_ffa': 'FFA compatible layout and well placed pickups for decent FFA gameplay.',
+	'feature_secret': 'Popular in the JA community, secrets are areas of maps that aren\'t found through normal means, usually behind camouflaged doors or invisible teleporters.',
+	'feature_secret_many': 'This map has many secrets, this tag usually means secrets were a primary focus of the map.',
+	
+	'rating_bronze': '',
+	'rating_silver': '',
+	'rating_gold': '',
+	'rating_platinum': '',
+	
+	'theme_ship': 'A significant portion of the map is on a ship (or space station).',
+	'theme_space': 'A significant portion of the map is in space. (NOTE: A space skybox is not enough, part of the map must be open to space.)',
+}
+
 class Util {
 	
 	static linkWrap(elem, url, className = null, target = null) {
@@ -32,38 +77,50 @@ class Util {
 	static prettyBytes(bytes) {
 		if (bytes < 2048) {
 			return String(bytes) + ' B'
-		} else if (bytes < 2097152) {
+		} else if (bytes < 1024000) {
 			return String((bytes / 1024).toFixed(2)) + ' KiB'
-		} else if (bytes < 2147483648) {
+		} else if (bytes < 1048576000) {
 			return String((bytes / 1048576).toFixed(2)) + ' MiB'
 		} else {
 			return String((bytes / 1073741824).toFixed(2)) + ' GiB'
 		}
 	}
 	
-	static stringifyTags(itags, etags) {
-		let str = ""
+	static stringifyTags(itags, etags, filter) {
+		let str = "#F"
 		
 		if (itags && itags.length && itags[0])
-			str += itags.join(';')
+			str += itags.join(',')
 		str += ':'
 		if (etags && etags.length && etags[0])
-			str += etags.join(';')
+			str += etags.join(',')
+		str += ':'
+		if (filter && filter.length)
+			str += encodeURI(filter)
 		return str;
 	}
 	
-	static destringifyTags(str) {
+	static destringifyTags(strin) {
+		console.log(strin)
+		if (!strin || !strin[0] || strin[0] != '#' || strin[1] != 'F')
+			return [[],[],""]
+			
+		let str = strin.slice(2)
 		let stagstr = str.split(':')
 		let itags = []
 		let etags = []
+		let filter = ""
 		
-		if (stagstr && stagstr.length && stagstr[0])
-			itags = stagstr[0].split(';')
-			
-		if (stagstr && stagstr.length && stagstr[1])
-			etags = stagstr[1].split(';')
+		if (stagstr && stagstr.length) {
+			if (stagstr[0] && stagstr[0].length)
+				itags = stagstr[0].split(',')
+			if (stagstr[1] && stagstr[1].length)
+				etags = stagstr[1].split(',')
+			if (stagstr[2] && stagstr[2].length)
+				filter = decodeURI(stagstr[2])
+		}
 		
-		return [itags, etags]
+		return [itags, etags, filter]
 	}
 	
 	static stringifyHSL(h, s, l) {
@@ -86,6 +143,59 @@ class Util {
 	static randomizeGlobalColors() {
 		Util.setGlobalColors(Math.random() * 360, 100, 50)
 	}
+	
+	static gameColorParse(text) {
+		let cont = document.createElement('span')
+		cont.className = 'gcol_cont'
+		if (text[0] != '^') text = '^7' + text
+		let csplit = text.split('^')
+		for (let i = 0; i < csplit.length; i++) {
+			let color = 7
+			let seg = csplit[i]
+			if (!seg.length) continue
+			if (seg[0] >= '0' && seg[0] <= '9') {
+				color = seg[0]
+				seg = seg.substr(1)
+			}
+			let span = document.createElement('span')
+			span.className = 'gcol_' + color
+			span.appendChild(document.createTextNode(seg))
+			cont.appendChild(span)
+		}
+		
+		return cont
+	}
+	
+	static gameColorStrip(text) {
+		if (text[0] != '^') text = '^7' + text
+		let csplit = text.split('^')
+		let ret = ""
+		for (let i = 0; i < csplit.length; i++) {
+			let seg = csplit[i]
+			if (seg[0] >= '0' && seg[0] <= '9') {
+				seg = seg.substr(1)
+			}
+			ret += seg
+		}
+		return ret
+	}
+	
+	static setupSettingsEntryBoolean(name, element, callback) {
+		let ls = localStorage.getItem(name)
+		if (ls != null) element.checked = JSON.parse(ls)
+		element.addEventListener('change', (e) => {
+			callback(element.checked)
+			localStorage.setItem(name, JSON.stringify(element.checked))
+		})
+		callback(element.checked)
+	}
+	
+	static isElementInView(e) {
+		let bounds = e.getBoundingClientRect()
+		if (bounds.bottom < 0) return false
+		if (bounds.top > window.innerHeight) return false
+		return true
+	}
 }
 
 class PageData {
@@ -94,24 +204,29 @@ class PageData {
 		
 		this.data = data
 		this.sets = this.data.sets
+		this.tags = []
 		this.dataLookup = {}
 		this.initialTitle = document.title
+		this.autothumb = true
+		this.animthumb = true;
+		
+		let closure_this = this
+		Util.setupSettingsEntryBoolean('settings_autothumb', settings_autothumb_cb, (val) => {
+			closure_this.autothumb = val
+		})
+		Util.setupSettingsEntryBoolean('settings_animthumb', settings_animthumb_cb, (val) => {
+			closure_this.animthumb = val
+		})
 		
 		let calcScore = (set) => {
 			let score = 0
 			
 			if (set.tags.includes('rating_platinum')) score += 400
-			if (set.tags.includes('rating_gold'))     score += 200
-			if (set.tags.includes('rating_silver'))   score += 100
-			if (set.tags.includes('rating_bronze'))   score += 50
+			if (set.tags.includes('rating_gold'))     score += 300
+			if (set.tags.includes('rating_silver'))   score += 200
+			if (set.tags.includes('rating_bronze'))   score += 100
 			
-			/*
-			if (set.tags.includes('size_huge')) score += 80
-			if (set.tags.includes('size_large')) score += 40
-			if (set.tags.includes('size_medium')) score += 20
-			if (set.tags.includes('size_small')) score += 10
-			if (set.tags.includes('size_tiny')) score += 5
-			*/
+			if (set.tags.includes('content_map')) score += 10 // show maps first for each rating
 			
 			return score
 		}
@@ -125,19 +240,60 @@ class PageData {
 		
 		for (let i = 0; i < this.sets.length; i++) {
 			let set = this.sets[i]
+			set.tags.sort()
 			this.dataLookup[set.ident] = set
+			for (let ti = 0; ti < set.tags.length; ti++) {
+				let tag = set.tags[ti]
+				if (!this.tags.includes(tag)) this.tags.push(tag)
+			}
 		}
+		
+		this.tags.sort()
+	}
+	
+	composeSearchBar(itags, etags, filter) {
+		let str = ''
+		if (itags.length) for (let i = 0; i < itags.length; i++) {
+			str += itags[i] + ' '
+		}
+		if (etags.length) for (let i = 0; i < etags.length; i++) {
+			str += '-' + etags[i] + ' '
+		}
+		str += filter
+		filter_entry.value = str
+	}
+	
+	decomposeSearchBar() {
+		let itags = []
+		let etags = []
+		let filter = ""
+		
+		let fsplit = filter_entry.value.split(' ')
+		for (let i = 0; i < fsplit.length; i++) {
+			let field = fsplit[i]
+			if (!field.length) continue
+			
+			let ex = field[0] == '-'
+			let tagcheck = ex ? field.substr(1) : field
+			if (this.tags.includes(tagcheck)) {
+				(ex ? etags : itags).push(tagcheck)
+				continue
+			}
+			
+			if (filter.length) filter += ' '
+			filter += field
+		}
+		
+		return [itags, etags, filter]
 	}
 }
 
 class MainPage {
 	
-	constructor(pd) {
-		this.pageData = pd
-		this.sets = this.pageData.sets
-		this.data = this.pageData.data
+	constructor() {
+		this.sets = pageData.sets
+		this.data = pageData.data
 		this.dataElements = []
-		this.tags = []
 		this.tagElements = []
 		this.tagLookup = {}
 		
@@ -146,19 +302,12 @@ class MainPage {
 			let e = this.createElement(set)
 			this.dataElements.push(e)
 			main_content.appendChild(e)
-			
-			for (let ti = 0; ti < set.tags.length; ti++) {
-				let tag = set.tags[ti]
-				if (!this.tags.includes(tag)) this.tags.push(tag)
-			}
 		}
-		
-		this.tags.sort()
 		
 		let lastcat = ""
 		
-		for (let i = 0; i < this.tags.length; i++) {
-			let tag = this.tags[i]
+		for (let i = 0; i < pageData.tags.length; i++) {
+			let tag = pageData.tags[i]
 			
 			let sp = tag.indexOf('_')
 			let cat = tag.substr(0, sp)
@@ -176,13 +325,13 @@ class MainPage {
 		}
 	}
 	
-	configure(itags, etags) {
+	configure(itags, etags, text_filter) {
 		
-		document.title = this.pageData.initialTitle
+		document.title = pageData.initialTitle
 		main_content.style.display = null
 		filter_panel.style.display = null
-		this.filter_entries(itags, etags)
-		this.filter_tags(itags, etags)
+		this.filter_entries(itags, etags, text_filter)
+		this.filter_tags(itags, etags, text_filter)
 	}
 	
 	deconfigure() {
@@ -190,32 +339,42 @@ class MainPage {
 		filter_panel.style.display = 'none'
 	}
 	
-	filter_entries(itags, etags) {
-		
-		if ((!itags || !itags.length || !itags[0]) && (!etags || !etags.length || !etags[0])) {
-			for (let i = 0; i < this.dataElements.length; i++) {
-				let dat = this.dataElements[i]
-				dat.style.display = null
-			}
-			return;
-		}
+	filter_entries(itags, etags, text_filter) {
 		
 		for (let i = 0; i < this.dataElements.length; i++) {
-			let dat = this.dataElements[i]
-			dat.style.display = null
-			
-			for (let ti = 0; ti < itags.length; ti++) {
-				if (!dat.set.tags.includes(itags[ti]))
-					dat.style.display = 'none'
+			this.dataElements[i].style.display = null
+		}
+		
+		if ((itags && itags.length && itags[0]) || (etags && etags.length && etags[0])) {
+			for (let i = 0; i < this.dataElements.length; i++) {
+				let dat = this.dataElements[i]
+				
+				for (let ti = 0; ti < itags.length; ti++) {
+					if (!dat.set.tags.includes(itags[ti]))
+						dat.style.display = 'none'
+				}
+				for (let ti = 0; ti < etags.length; ti++) {
+					if (dat.set.tags.includes(etags[ti]))
+						dat.style.display = 'none'
+				}
 			}
-			for (let ti = 0; ti < etags.length; ti++) {
-				if (dat.set.tags.includes(etags[ti]))
-					dat.style.display = 'none'
+		}
+		
+		if (text_filter && text_filter[0]) {
+			for (let i = 0; i < this.dataElements.length; i++) {
+				let dat = this.dataElements[i]
+				
+				let match = false
+				if (dat.set.path.split('/').slice(-1)[0].toUpperCase().includes(text_filter.toUpperCase()))
+					match = true
+				if (Util.gameColorStrip(dat.set.title).toUpperCase().includes(text_filter.toUpperCase()))
+					match = true
+				if (!match) dat.style.display = 'none'
 			}
 		}
 	}
 	
-	filter_tags(itags, etags) {
+	filter_tags(itags, etags, text_filter) {
 		
 		for (let i = 0; i < this.tagElements.length; i++) {
 			let e = this.tagElements[i]
@@ -237,8 +396,8 @@ class MainPage {
 			
 			e.num.innerText = e.num.useCount
 			
-			e.addE.href = '#F' + Util.stringifyTags(itags.concat(e.tag), etags)
-			e.remE.href = '#F' + Util.stringifyTags(itags, etags.concat(e.tag))
+			e.addE.href = Util.stringifyTags(itags.concat(e.tag), etags, text_filter)
+			e.remE.href = Util.stringifyTags(itags, etags.concat(e.tag), text_filter)
 		}
 		
 	}
@@ -252,6 +411,9 @@ class MainPage {
 		namespan.className = 'cat_name'
 		namespan.innerText = cat
 		cont.appendChild(namespan)
+		
+		if (cat in CAT_DESC)
+			cont.title = CAT_DESC[cat]
 		
 		return cont
 	}
@@ -286,6 +448,9 @@ class MainPage {
 		cont.appendChild(remspan)
 		cont.remE = remspan
 		
+		if (tag in TAG_DESC)
+			cont.title = TAG_DESC[tag]
+		
 		return cont
 	}
 	
@@ -314,6 +479,14 @@ class MainPage {
 			)
 		)
 		
+		img_stuff.appendChild(
+			Util.linkWrap(
+				Util.materialIcon('collections'),
+				'#I' + set.ident,
+				'tlink'
+			)
+		)
+		
 		let deets = document.createElement('div')
 		deets.className = 'dl_deets_cont'
 		let deets_size = document.createElement('span')
@@ -326,7 +499,7 @@ class MainPage {
 			deets_star.className = 'dl_deets_star_plat'
 			deets_star.title = 'Curator\'s Choice: Platinum'
 		}
-		if (set.tags.includes('rating_gold')) {
+		else if (set.tags.includes('rating_gold')) {
 			deets_star.className = 'dl_deets_star_gold'
 			deets_star.title = 'Curator\'s Choice: Gold'
 		}
@@ -349,7 +522,6 @@ class MainPage {
 		let thumb_bot = document.createElement('img')
 		thumb_cont.className = 'dl_thumb_cont'
 		thumb_top.className = 'dl_thumb'
-		thumb_top.style.top = '-120px'
 		thumb_bot.className = 'dl_thumb'
 		
 		let imgs = []
@@ -364,35 +536,45 @@ class MainPage {
 		
 		if (imgs.length > 1) {
 			
+			thumb_top.style.top = '-120px'
 			thumb_bot.src = imgs[imgi2]
 			imgi = imgi2
 			
 			let animTimeout = null
 			let autoTimeout = null
 			let autoTimeoutFunc
+			let pg = pageData
+			
+			let imageTransitionFunc = () => {
+				thumb_top.src = imgs[imgi++]
+				if (imgi >= imgs.length) imgi = 0
+				
+				let imgn = imgi
+				if (imgn >= imgs.length) imgn = 0
+				thumb_bot.src = imgs[imgn]
+			}
 			
 			let nextImageFunc = () => {
 				if (animTimeout != null) {
 					return
 				}
 				autoTimeoutFunc()
-				thumb_top.style.animation = "dl_thumb_fade 0.5s forwards"
-				animTimeout = setTimeout(()=>{
-					animTimeout = null
-					thumb_top.style.animation = null
-					thumb_top.src = imgs[imgi++]
-					if (imgi >= imgs.length) imgi = 0
-					
-					let imgn = imgi
-					if (imgn >= imgs.length) imgn = 0
-					thumb_bot.src = imgs[imgn]
-				}, 500)
+				
+				if (pg.animthumb) {
+					thumb_top.style.animation = "dl_thumb_fade 0.5s forwards"
+					animTimeout = setTimeout(()=>{
+						animTimeout = null
+						thumb_top.style.animation = null
+						imageTransitionFunc()
+					}, 500)
+				} else
+					imageTransitionFunc()
 			}
 			
 			autoTimeoutFunc = () => {
 				clearTimeout(autoTimeout)
 				autoTimeout = setTimeout(()=>{
-					nextImageFunc()
+					if (pg.autothumb && Util.isElementInView(cont)) nextImageFunc()
 					autoTimeoutFunc()
 				}, THUMB_DELAY_RAND * Math.random() + THUMB_DELAY_STATIC)
 			}
@@ -418,9 +600,7 @@ class MainPage {
 
 class DetailsPage {
 	
-	constructor(pd) {
-		this.pageData = pd
-	}
+	constructor() {}
 	
 	configure(ident) {
 		
@@ -433,18 +613,18 @@ class DetailsPage {
 		filter_panel.style.display = 'none'
 		
 		Util.removeChildren(details_thumbcont)
-		let set = this.pageData.dataLookup[ident]
+		let set = pageData.dataLookup[ident]
 		
 		for (let i = 0; i < set.img.length; i++) {
-			let imgT = this.pageData.data.general.image_root + 't/' + set.ident + '_' + set.img[i] + THUMB_EXT
-			let imgI = this.pageData.data.general.image_root + 'i/' + set.ident + '_' + set.img[i] + IMAGE_EXT
+			let imgT = pageData.data.general.image_root + 't/' + set.ident + '_' + set.img[i] + THUMB_EXT
+			let imgI = pageData.data.general.image_root + 'i/' + set.ident + '_' + set.img[i] + IMAGE_EXT
 			let img = document.createElement('img')
 			img.src = imgT
 			img.style.marginLeft = '10px'
 			details_thumbcont.appendChild(Util.linkWrap(img, '#I' + ident + '_' + i, 'ilink'))
 		}
 		
-		details_download.href = this.pageData.data.general.content_root + set.path
+		details_download.href = pageData.data.general.content_root + set.path
 		details_gallery.href = '#I' + set.ident
 		
 		details_name.innerText = set.path.substr(set.path.lastIndexOf('/') + 1)
@@ -461,7 +641,9 @@ class DetailsPage {
 			details_tags.appendChild(Util.linkWrap(document.createTextNode(tag), '#F' + tag, 'tlink'))
 		}
 		
-		details_titlecont.innerText = set.title ? set.title : "<NO TITLE>"
+		Util.removeChildren(details_titlecont)
+		details_titlecont.appendChild(Util.gameColorParse(set.title ? set.title : "<NO TITLE>"))
+		
 		details_desccont.innerHTML = set.desc ? set.desc : ""
 	}
 	
@@ -473,9 +655,7 @@ class DetailsPage {
 
 class GalleryPage {
 	
-	constructor(pd) {
-		this.pageData = pd
-	}
+	constructor() {}
 	
 	configure(ident_in) {
 		
@@ -491,11 +671,11 @@ class GalleryPage {
 		gallery.style.display = null
 		filter_panel.style.display = 'none'
 		
-		let set = this.pageData.dataLookup[ident]
+		let set = pageData.dataLookup[ident]
 		
 		let imgs = []
 		for (let i = 0; i < set.img.length; i++) {
-			imgs[i] = this.pageData.data.general.image_root + 'i/' + set.ident + '_' + set.img[i] + IMAGE_EXT
+			imgs[i] = pageData.data.general.image_root + 'i/' + set.ident + '_' + set.img[i] + IMAGE_EXT
 		}
 		
 		let imgi = parseInt(start_num)
@@ -531,6 +711,7 @@ function configure_page_filter(ident) {
 	gallery.style.display = 'none'
 }
 
+var pageData
 var pageMain
 var pageDetails
 var pageGallery
@@ -538,31 +719,26 @@ var pageGallery
 function configure_page() {
 	
 	let hash = window.location.hash
-	if (hash.length < 2) { // configure main
-		pageMain.configure([], [])
+	filter_entry.value = ''
+	if (hash.length < 2 || hash[1] == 'F') { // configure main
+		let ct = Util.destringifyTags(hash)
+		pageMain.configure(ct[0], ct[1], ct[2])
+		pageData.composeSearchBar(... ct)
 		pageDetails.deconfigure()
 		pageGallery.deconfigure()
 		return
 	}
-	hash = hash.substr(1)
-	if (hash[0] == 'N') { // configure details
-		hash = hash.substr(1)
+	if (hash[1] == 'N') { // configure details
+		hash = hash.substr(2)
 		pageMain.deconfigure()
 		pageDetails.configure(hash)
 		pageGallery.deconfigure()
 	}
-	else if (hash[0] == 'I') { // configure gallery
-		hash = hash.substr(1)
+	else if (hash[1] == 'I') { // configure gallery
+		hash = hash.substr(2)
 		pageMain.deconfigure()
 		pageDetails.deconfigure()
 		pageGallery.configure(hash)
-	}
-	else if (hash[0] == 'F') { // configure filter
-		hash = hash.substr(1)
-		let ct = Util.destringifyTags(hash)
-		pageMain.configure(ct[0], ct[1])
-		pageDetails.deconfigure()
-		pageGallery.deconfigure()
 	}
 }
 
@@ -576,12 +752,22 @@ function create_material_icon(type) {
 function setup_page(dat) {
 	
 	Util.randomizeGlobalColors()
-	let pageData = new PageData(dat)
 	
+	pageData = new PageData(dat)
 	pageMain = new MainPage(pageData)
 	pageDetails = new DetailsPage(pageData)
 	pageGallery = new GalleryPage(pageData)
 	configure_page()
+	
+	settings_menu_act.addEventListener('click', (e) => {
+		settings_menu.style.visibility = settings_menu.style.visibility == '' ? 'hidden' : ''
+	})
+	
+	filter_entry.addEventListener("keyup", (e)=>{
+    if (e.key === "Enter") {
+        window.location.href = Util.stringifyTags(... pageData.decomposeSearchBar())
+    }
+});
 }
 
 window.addEventListener('DOMContentLoaded', (e) => {

@@ -15,7 +15,7 @@ struct TagsPaneItem::PrivateData {
 
 TagsPaneItem::TagsPaneItem(QString name, QWidget * parent) : QWidget { parent }, m_data { new PrivateData }, m_name { name } {
 	QHBoxLayout * lay = new QHBoxLayout { this };
-	lay->setMargin(0);
+	lay->setContentsMargins(0, 0, 0, 0);
 	lay->setSpacing(0);
 	
 	QLabel * tag_label = new QLabel { name, this };
@@ -111,7 +111,7 @@ void TagsPane::rebuild_view() {
 	m_data->lay = new QVBoxLayout { m_data->wid };
 	m_data->lay->setAlignment(Qt::AlignTop);
 	m_data->lay->setSpacing(0);
-	m_data->lay->setMargin(0);
+	m_data->lay->setContentsMargins(0, 0, 0, 0);
 	
 	bool alt = false;
 	for (auto iter = m_data->tag_items.begin(); iter != m_data->tag_items.end(); iter++) {

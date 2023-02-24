@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Backend.hh"
 #include "Options.hh"
 
 #include <QLabel>
@@ -22,14 +23,19 @@ protected:
 class ImagePaneItem : public QWidget {
 	Q_OBJECT
 	
+signals:
+	void delete_request(JAPortalDataSet const *, int);
+	
 public:
-	ImagePaneItem(QString ipath, QString tpath, QWidget * parent);
+	ImagePaneItem(JAPortalDataSet const * dset, int num, QString ipath, QString tpath, QWidget * parent);
 	~ImagePaneItem();
 	
 private:
 	struct PrivateData;
 	std::unique_ptr<PrivateData> m_data;
 	
+	JAPortalDataSet const * m_dset;
+	int m_num;
 	QString m_ipath;
 	QString m_tpath;
 	QPixmap m_thumb;
@@ -42,10 +48,11 @@ public:
 	ImagePane(QWidget * parent);
 	~ImagePane();
 	
-	void add_image(QString iname, QString tname);
+	void add_image(JAPortalDataSet const * dset, int num);
 	
 signals:
 	void image_dropped(QString);
+	void delete_request(JAPortalDataSet const *, int);
 	
 public slots:
 	void clear();

@@ -43,6 +43,7 @@ public:
 	void update_entry_metadata(QMap<QString, QFileInfo> const &);
 	
 	[[nodiscard]] bool add_image(JAPortalDataSet const & set, QImage const & img);
+	void remove_image(JAPortalDataSet const & set, int num);
 	void purge_and_regenerate_images();
 	
 	void set_tags(JAPortalDataSet const & set, QStringList const & tags);
@@ -57,6 +58,7 @@ public slots:
 	void load();
 	void save();
 	void prepare(JAPortalOptions const &);
+	void validate();
 	
 private:
 	struct PrivateData;

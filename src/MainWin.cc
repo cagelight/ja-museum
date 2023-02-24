@@ -5,7 +5,9 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QSortFilterProxyModel>
 
+#include <QCheckBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
@@ -17,10 +19,16 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
+#include <random>
+
 struct JAPortalMainWin::PrivateData {
 	QTreeWidget * pk3_view;
 	QMap<QString, QFileInfo> pk3_view_infos;
 	QMap<QString, QTreeWidgetItem *> pk3_view_item_lookup;
+	
+	bool pk3_view_unproc_hidden = false;
+	bool pk3_view_proc_hidden = false;
+	QString pk3_view_name_filter;
 	
 	QWidget * ci_info_cont = nullptr;
 	QLineEdit * ci_title = nullptr;
@@ -62,26 +70,56 @@ JAPortalMainWin::JAPortalMainWin() : QMainWindow(), m_data { new PrivateData } {
 	m_data->pk3_view = new QTreeWidget { main_wid };
 	m_data->pk3_view->setMinimumSize(600, 300);
 	m_data->pk3_view->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-	main_lay->addWidget(m_data->pk3_view, 0, 0);
+	main_lay->addWidget(m_data->pk3_view, 1, 0);
+	
+	QWidget * pk3_ctrl_wid = new QWidget { main_wid };
+	QHBoxLayout * pk3_ctrl_lay = new QHBoxLayout { pk3_ctrl_wid };
+	pk3_ctrl_lay->setContentsMargins(0, 0, 0, 0);
+	QLineEdit * pk3_ctrl_filter = new QLineEdit { pk3_ctrl_wid };
+	QCheckBox * pk3_ctrl_hide_proc = new QCheckBox { pk3_ctrl_wid };
+	QCheckBox * pk3_ctrl_hide_unproc = new QCheckBox { pk3_ctrl_wid };
+	pk3_ctrl_lay->addWidget( new QLabel { "Filter:", pk3_ctrl_wid } );
+	pk3_ctrl_lay->addWidget(pk3_ctrl_filter);
+	pk3_ctrl_lay->addWidget( new QLabel { "Hide Complete:", pk3_ctrl_wid } );
+	pk3_ctrl_lay->addWidget(pk3_ctrl_hide_proc);
+	pk3_ctrl_lay->addWidget( new QLabel { "Hide Unprocessed:", pk3_ctrl_wid } );
+	pk3_ctrl_lay->addWidget(pk3_ctrl_hide_unproc);
+	main_lay->addWidget(pk3_ctrl_wid, 0, 0);
+	
+	connect(pk3_ctrl_filter, &QLineEdit::textChanged, this, [this](QString const & text){
+		m_data->pk3_view_name_filter = text;
+		filter_pk3_view();
+	});
+	
+	connect(pk3_ctrl_hide_proc, &QCheckBox::stateChanged, this, [this](int state){
+		m_data->pk3_view_proc_hidden = state & Qt::Checked;
+		filter_pk3_view();
+	});
+	
+	connect(pk3_ctrl_hide_unproc, &QCheckBox::stateChanged, this, [this](int state){
+		m_data->pk3_view_unproc_hidden = state & Qt::Checked;
+		filter_pk3_view();
+	});
 	
 	QWidget * right_area = new QWidget { main_wid };
 	right_area->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::MinimumExpanding);
 	QVBoxLayout * right_lay = new QVBoxLayout { right_area };
-	right_lay->setMargin(0);
+	right_lay->setContentsMargins(0, 0, 0, 0);
 	right_lay->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-	main_lay->addWidget(right_area, 0, 1, 2, 1);
+	main_lay->addWidget(right_area, 0, 1, 3, 1);
 	
 	m_data->ci_info_cont = new QWidget { main_wid };
 	QGridLayout * info_lay = new QGridLayout { m_data->ci_info_cont };
-	info_lay->setMargin(0);
+	info_lay->setContentsMargins(0, 0, 0, 0);
 	m_data->ci_title = new QLineEdit { m_data->ci_info_cont };
 	m_data->ci_title->setPlaceholderText("Title");
 	info_lay->addWidget(m_data->ci_title, 0, 0);
 	m_data->ci_desc = new QTextEdit { m_data->ci_info_cont };
+	m_data->ci_desc->setAcceptRichText(false);
 	m_data->ci_desc->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 	m_data->ci_desc->setPlaceholderText("Description");
 	info_lay->addWidget(m_data->ci_desc, 1, 0);
-	main_lay->addWidget(m_data->ci_info_cont, 1, 0);
+	main_lay->addWidget(m_data->ci_info_cont, 2, 0);
 	
 	connect(m_data->pk3_view, &QTreeWidget::itemDoubleClicked, this, [this](QTreeWidgetItem * item, int){
 		if (!item) return;
@@ -102,7 +140,7 @@ JAPortalMainWin::JAPortalMainWin() : QMainWindow(), m_data { new PrivateData } {
 	
 	QWidget * content_prefix_cont = new QWidget { right_area };
 	QHBoxLayout * content_prefix_lay = new QHBoxLayout { content_prefix_cont };
-	content_prefix_lay->setMargin(0);
+	content_prefix_lay->setContentsMargins(0, 0, 0, 0);
 	content_prefix_lay->addWidget(new QLabel { "Content Root:", content_prefix_cont });
 	m_data->content_prefix_le = new QLineEdit { content_prefix_cont };
 	m_data->content_prefix_le->setMinimumWidth(300);
@@ -117,7 +155,7 @@ JAPortalMainWin::JAPortalMainWin() : QMainWindow(), m_data { new PrivateData } {
 	
 	QWidget * image_prefix_cont = new QWidget { right_area };
 	QHBoxLayout * image_prefix_lay = new QHBoxLayout { image_prefix_cont };
-	image_prefix_lay->setMargin(0);
+	image_prefix_lay->setContentsMargins(0, 0, 0, 0);
 	image_prefix_lay->addWidget(new QLabel { "Image Root:", image_prefix_cont });
 	m_data->image_prefix_le = new QLineEdit { image_prefix_cont };
 	m_data->image_prefix_le->setMinimumWidth(300);
@@ -132,7 +170,7 @@ JAPortalMainWin::JAPortalMainWin() : QMainWindow(), m_data { new PrivateData } {
 	
 	QWidget * ci_pre_cont = new QWidget { right_area };
 	QHBoxLayout * ci_pre_lay = new QHBoxLayout { ci_pre_cont };
-	ci_pre_lay->setMargin(0);
+	ci_pre_lay->setContentsMargins(0, 0, 0, 0);
 	m_data->ci_pre_name_le = new QLineEdit { ci_pre_cont };
 	m_data->ci_pre_name_le->setReadOnly(true);
 	m_data->ci_pre_name_le->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
@@ -155,7 +193,7 @@ JAPortalMainWin::JAPortalMainWin() : QMainWindow(), m_data { new PrivateData } {
 	right_lay->addWidget(m_data->ci_wid);
 	
 	QVBoxLayout * ci_lay = new QVBoxLayout { m_data->ci_wid };
-	ci_lay->setMargin(0);
+	ci_lay->setContentsMargins(0, 0, 0, 0);
 	ci_lay->setAlignment(Qt::AlignTop);
 	
 	m_data->ci_img_pane = new ImagePane { m_data->ci_wid };
@@ -169,7 +207,7 @@ JAPortalMainWin::JAPortalMainWin() : QMainWindow(), m_data { new PrivateData } {
 	
 	QWidget * ci_tagsb_wid = new QWidget { m_data->ci_wid };
 	QHBoxLayout * ci_tagsb_lay = new QHBoxLayout { ci_tagsb_wid };
-	ci_tagsb_lay->setMargin(0);
+	ci_tagsb_lay->setContentsMargins(0, 0, 0, 0);
 	QPushButton * ci_tagsb_add_b = new QPushButton { "Add Tags", ci_tagsb_wid };
 	QPushButton * ci_tagsb_rem_b = new QPushButton { "Remove Tags", ci_tagsb_wid };
 	QPushButton * ci_tagsb_set_b = new QPushButton { "Set Tags", ci_tagsb_wid };
@@ -179,10 +217,16 @@ JAPortalMainWin::JAPortalMainWin() : QMainWindow(), m_data { new PrivateData } {
 	ci_lay->addWidget(ci_tagsb_wid);
 	
 	connect(m_data->ci_img_pane, &ImagePane::image_dropped, this, &JAPortalMainWin::add_image_to_current_item);
+	connect(m_data->ci_img_pane, &ImagePane::delete_request, this, [this](JAPortalDataSet const * dset, int num){
+		Q_ASSERT(m_data->ci_item);
+		JAPortalDataSet const & data = m_backend->get_or_create_entry(m_data->ci_item->text(1));
+		Q_ASSERT(dset == &data);
+		this->delete_image_on_current_item(num);
+	});
 	
 	connect(ci_add_img_b, &QPushButton::clicked, this, [this](){
 		static QString last_dir = QDir::homePath();
-		QStringList imgs = QFileDialog::getOpenFileNames(m_data->ci_wid, "Select Images", last_dir, "Supported Lossless Images (*.bmp *.png *.tga *.webp))", nullptr, 0);
+		QStringList imgs = QFileDialog::getOpenFileNames(m_data->ci_wid, "Select Images", last_dir, "Supported Lossless Images (*.bmp *.png *.tga *.webp))");
 		if (imgs.isEmpty()) return;
 		last_dir = QFileInfo { imgs[0] } .absolutePath();
 		for (QString path : imgs) {
@@ -226,11 +270,14 @@ JAPortalMainWin::JAPortalMainWin() : QMainWindow(), m_data { new PrivateData } {
 	QWidget * button_cont = new QWidget { right_area };
 	button_cont->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 	QHBoxLayout * button_lay = new QHBoxLayout { button_cont };
-	button_lay->setMargin(0);
+	button_lay->setContentsMargins(0, 0, 0, 0);
+	QPushButton * validate_b = new QPushButton { "Validate", button_cont };
 	QPushButton * save_b = new QPushButton { "Save && Export", button_cont };
+	button_lay->addWidget(validate_b);
 	button_lay->addWidget(save_b);
 	right_lay->addWidget(button_cont);
 	
+	connect(validate_b, &QPushButton::clicked, this, &JAPortalMainWin::validate);
 	connect(save_b, &QPushButton::clicked, this, &JAPortalMainWin::save);
 	
 	// ================
@@ -294,10 +341,8 @@ void JAPortalMainWin::setup_current_item() {
 	
 	m_data->ci_img_pane->clear();
 	
-	auto inames = data.image_names(IMAGE_SAVE_EXT);
-	auto tnames = data.image_names(THUMB_SAVE_EXT);
-	for (int i = 0; i < inames.size(); i++) {
-		m_data->ci_img_pane->add_image(inames[i], tnames[i]);
+	for (int i = 0; i < data.images.size(); i++) {
+		m_data->ci_img_pane->add_image(&data, i);
 	}
 	m_data->ci_tags->set_tags_checked(data.tags, false);
 	update_item_status(m_data->ci_item);
@@ -313,8 +358,13 @@ void JAPortalMainWin::add_image_to_current_item(QString path) {
 	if (!m_backend->add_image(data, img)) {
 		return;
 	}
-	m_data->ci_img_pane->add_image(data.name_for_num(data.images.last(), IMAGE_SAVE_EXT), data.name_for_num(data.images.last(), THUMB_SAVE_EXT));
+	m_data->ci_img_pane->add_image(&data, data.images.last());
 	update_item_status(m_data->ci_item);
+}
+
+void JAPortalMainWin::delete_image_on_current_item(int num) {
+	if (!m_data->ci_item) return;
+	m_backend->remove_image(m_backend->get_or_create_entry(m_data->ci_item->text(1)), num);
 }
 
 void JAPortalMainWin::set_tags_on_current_item(QStringList tags) {
@@ -335,7 +385,13 @@ void JAPortalMainWin::set_description_on_current_item(QString desc) {
 	update_item_status(m_data->ci_item);
 }
 
+void JAPortalMainWin::validate() {
+	m_backend->validate();
+	setup_current_item();
+}
+
 void JAPortalMainWin::save() {
+	validate();
 	m_backend->update_entry_metadata(m_data->pk3_view_infos);
 	m_backend->save();
 }
@@ -343,17 +399,30 @@ void JAPortalMainWin::save() {
 void JAPortalMainWin::select_random_item() {
 	std::vector<QTreeWidgetItem *> candidates;
 	for (auto const & kvp : m_data->pk3_view_item_lookup)
-		if (kvp->text(2) == "Unprocessed") candidates.emplace_back(kvp);
-	if (!candidates.size()) for (auto const & kvp : m_data->pk3_view_item_lookup)
 		if (kvp->text(2) == "Incomplete") candidates.emplace_back(kvp);
+	if (!candidates.size()) for (auto const & kvp : m_data->pk3_view_item_lookup)
+		if (kvp->text(2) == "Unprocessed") candidates.emplace_back(kvp);
 	if (!candidates.size()) {
 		QMessageBox::information(this, "Nothing Left", "Nothing Left To Do");
 		return;
 	}
 	
-	QTreeWidgetItem * item = candidates[qrand() % candidates.size()];
+	static std::mt19937_64 rng {std::random_device{}()};
+	std::uniform_int_distribution<size_t> dist { 0, candidates.size() - 1 };
+	
+	QTreeWidgetItem * item = candidates[dist(rng)];
 	m_data->pk3_view->expandAll();
 	m_data->pk3_view->setCurrentItem(item);
+}
+
+void JAPortalMainWin::filter_pk3_view() {
+	for (auto & item : m_data->pk3_view_item_lookup) {
+		bool hide = false;
+		if (m_data->pk3_view_proc_hidden && item->text(2) == "Complete") hide = true;
+		if (m_data->pk3_view_unproc_hidden && item->text(2) == "Unprocessed") hide = true;
+		if (!item->text(1).contains(m_data->pk3_view_name_filter, Qt::CaseInsensitive)) hide = true;
+		item->setHidden(hide);
+	}
 }
 
 void JAPortalMainWin::populate_gui(JAPortalOptions const & opt) {
@@ -386,6 +455,8 @@ void JAPortalMainWin::populate_gui(JAPortalOptions const & opt) {
 	m_data->pk3_view->setHeaderLabels({"File", "Relative Path", "Processed?"});
 	m_data->pk3_view->setColumnWidth(0, 300);
 	m_data->pk3_view->setColumnWidth(1, 160);
+	m_data->pk3_view->expandAll();
+	filter_pk3_view();
 	
 	auto const & globals = m_backend->general_data();
 	m_data->content_prefix_le->setText(globals.content_root);

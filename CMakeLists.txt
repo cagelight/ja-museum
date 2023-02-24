@@ -14,7 +14,7 @@ if( NOT CMAKE_BUILD_TYPE )
 endif()
 message( "Using build configuration: ${CMAKE_BUILD_TYPE}" )
 
-find_package(Qt5Widgets)
+find_package(Qt6 COMPONENTS Widgets REQUIRED)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -23,5 +23,5 @@ file( GLOB_RECURSE MAIN_FILES
 )
 
 add_executable( japortal ${MAIN_FILES} )
-target_link_libraries( japortal PUBLIC Qt5::Widgets "-lmeadow" "-lpthread" )
+target_link_libraries( japortal PUBLIC Qt6::Widgets "-lmeadow" "-lpthread" )
 install( TARGETS japortal RUNTIME DESTINATION "bin" )
